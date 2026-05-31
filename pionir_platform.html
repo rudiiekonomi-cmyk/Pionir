@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIONIR - Platform Inkubasi Wirausaha Daerah Kaltara</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#04100D',
+                            deep: '#0B231D',
+                            emerald: '#0EA5E9',
+                            sea: '#047857',
+                            fresh: '#10B981',
+                            teal: '#14B8A6',
+                            light: '#F4FBF7',
+                            slate: '#64748B',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #F4FBF7;
+        }
+        .premium-shadow {
+            box-shadow: 0 12px 40px -10px rgba(4, 120, 87, 0.08), 0 1px 3px -1px rgba(0, 0, 0, 0.04);
+        }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(4, 120, 87, 0.02);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.4);
+        }
+    </style>
+</head>
+<body class="text-brand-dark overflow-x-hidden antialiased">
+
+<div id="app" class="min-h-screen flex flex-col justify-between">
+    <!-- Konten disuntikkan secara dinamis menggunakan JS Controller -->
+</div>
+
+<!-- TOAST NOTIFICATION COMPONENT -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-brand-deep text-white border border-brand-fresh/40 px-5 py-4 rounded-2xl flex items-center gap-3 shadow-2xl max-w-sm">
+        <div class="w-8 h-8 rounded-xl bg-brand-fresh/20 flex items-center justify-center text-brand-fresh font-black" id="toast-icon">✓</div>
+        <div>
+            <p class="text-xs font-bold" id="toast-title">Sistem PIONIR</p>
+            <p class="text-[11px] text-gray-300" id="toast-msg">Tindakan berhasil diselesaikan.</p>
+        </div>
+    </div>
+</div>
+
+<!-- GLOBAL OVERLAY MODAL / DRAWER -->
+<div id="inspector-drawer" class="fixed inset-0 z-50 hidden bg-brand-dark/60 backdrop-blur-sm flex justify-end transition-all duration-300">
+    <!-- Dynamic drawer content will load here -->
+</div>
+
+<!-- DATA PIPELINE / SIMULATED FIRESTORE SYNC STATE -->
+<script>
+
+// Predefined Global Commodity Profiles
+const COMMODITY_PROFILES = {
+    seaweed: {
+        name: "Rumput Laut Nunukan",
+        stats: "Sentra Ekspor Kaltara",
+        desc: "Nunukan memproduksi lebih dari 60.000 ton rumput laut kering per tahun. Mayoritas diekspor mentah tanpa hilirisasi.",
+        products: ["Snack Rumput Laut Rasa Dayak", "Serum Pelembab Rumput Laut", "Pupuk Organik Cair Sektor Tani", "Bioplastik Organik"]
+    },
+    shrimp: {
+        name: "Udang Windu Bulungan",
+        stats: "Kualitas Premium Organik",
+        desc: "Dihasilkan melalui pertambakan tradisional silvofishery di bawah keteduhan mangrove alami tanpa kimia.",
+        products: ["Kaldu Kepala Udang Instan", "Casing Biopolimer Chitosan", "Abon Udang Windu Rempah"]
+    },
+    crab: {
+        name: "Kepiting Bakau Tarakan",
+        stats: "Komoditas High-Value Ekspor",
+        desc: "Kepiting cangkang lunak (soka) memiliki minat pasar masif di Tiongkok dan Singapura.",
+        products: ["Keripik Kepiting Soka Crispy", "Pasta Saus Padang Kepiting", "Edible Coating Chitin Pengawet Buah"]
+    },
+    fish: {
+        name: "Ikan Pepija Tarakan",
+        stats: "Oleh-oleh Ikonik Kaltara",
+        desc: "Ikan pipih tipis yang rasanya sangat gurih saat dikeringkan dan digoreng.",
+        products: ["Pepija Panggang Oven Non-Kolesterol", "Kolagen Alami Bubuk Pepija", "Fish Stick Olahan Siap Saji"]
+    }
+};
+
+// Simulated Database of Platform Participants
+let participantsData = [
+    {
+        id: "rizky",
+        name: "Ahmad Rizky",
+        email: "rizky@pionir.id",
+        commodity: "Rumput Laut Nunukan",
+        milestones: { learn: true, build: true, validate: false, scale: false },
+        quizScore: 90,
+        quizStatus: "Lulus",
+        brandName: "NoriKaltara",
+        brandTagline: "Rasa Kaltara Mendunia",
+        brandPalette: "seaweed",
+        canvasNotes: [
+            { id: 1, section: "value", text: "Snack Rumput Laut renyah dengan taburan rempah tradisional Dayak Kenyah.", color: "bg-yellow-100" },
+            { id: 2, section: "segments", text: "Remaja dan Dewasa usia 15-35 tahun di perkotaan Kaltara & Kaltim.", color: "bg-emerald-100" },
+            { id: 3, section: "channels", text: "Optimasi Live TikTok, Instagram Shopping, dan reseller retail oleh-oleh Tarakan.", color: "bg-blue-100" }
+        ],
+        challengeFile: "proposal_validasi_rizky.pdf",
+        challengeStatus: "Disetujui",
+        juriScore: 88,
+        juriFeedback: "Inovasi rasa pedas Dayak sangat otentik. Perlu memperkuat segmentasi pengiriman luar daerah.",
+        investedCapital: 15000000,
+        investorNotes: "Sangat prospektif untuk dipasarkan di Ibu Kota Nusantara (IKN)."
+    },
+    {
+        id: "sitirahma",
+        name: "Siti Rahma",
+        email: "sitirahma@pionir.id",
+        commodity: "Udang Windu Bulungan",
+        milestones: { learn: true, build: false, validate: false, scale: false },
+        quizScore: 80,
+        quizStatus: "Lulus",
+        brandName: "ChitoSkin",
+        brandTagline: "Pesona Bahari Untuk Kulit Sehat",
+        brandPalette: "shrimp",
+        canvasNotes: [
+            { id: 1, section: "value", text: "Serum kecantikan anti-acne alami berbahan chitosan hasil limbah cangkang udang.", color: "bg-rose-100" }
+        ],
+        challengeFile: "laporan_formula_chitoskin.pdf",
+        challengeStatus: "Menunggu Review",
+        juriScore: null,
+        juriFeedback: "",
+        investedCapital: 0,
+        investorNotes: ""
+    }
+];
+
+// App global state
+const store = {
+    view: 'landing', // landing, login, register, dashboard
+    currentRole: 'peserta', // admin, peserta, juri, investor
+    currentUser: null, // { name, email, id }
+    dashboardTab: 'home', // home, academy, challenge, hub, canvas, branding, market, space, tracker, showcase (depending on role)
+    selectedParticipantId: null, // for admin inspector
+    
+    // Dynamic lists that can be manipulated in-memory for live demo
+    activePrograms: [
+        { id: 1, title: "Modul Hilirisasi Bioteknologi Pesisir", category: "Academy", target: "Peserta" },
+        { id: 2, title: "Lomba Perencanaan & Penyusunan Bisnis Kaltara 2026", category: "Challenge", target: "Peserta" },
+        { id: 3, title: "Kurasi Kemasan Ritel Premium", category: "Branding", target: "Peserta" }
+    ],
+    investmentPool: 120000000, // Total available simulation fund
+    forumPosts: [
+        { id: 1, author: "Ahmad Rizky", role: "Peserta", text: "Ada yang tertarik join tim NoriKaltara bagian digital marketing? Prefer domisili Nunukan/Tarakan.", upvotes: 12 },
+        { id: 2, author: "Siti Rahma", role: "Peserta", text: "Butuh info supplier botol kaca pipet 20ml steril di sekitar Bulungan. Urgent!", upvotes: 4 }
+    ]
+};
+
+// UI Toast Helper
+function showToast(title, msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    const titleEl = document.getElementById('toast-title');
+    const msgEl = document.getElementById('toast-msg');
+    const iconEl = document.getElementById('toast-icon');
+
+    titleEl.textContent = title;
+    msgEl.textContent = msg;
+    
+    if (type === 'success') {
+        iconEl.innerHTML = "✓";
+        iconEl.className = "w-8 h-8 rounded-xl bg-brand-fresh/20 flex items-center justify-center text-brand-fresh font-black";
+    } else {
+        iconEl.innerHTML = "✖";
+        iconEl.className = "w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center text-red-500 font-black";
+    }
+
+    toast.classList.remove('translate-y-20', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+
+    setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+    }, 4000);
+}
+
+function setView(viewName) {
+    store.view = viewName;
+    renderApp();
+    window.scrollTo(0, 0);
+}
+
+function setDashboardTab(tabName) {
+    store.dashboardTab = tabName;
+    renderApp();
+}
+
+
+function handleLogin(e) {
+    e.preventDefault();
+    const emailInput = document.getElementById('login-email').value.trim();
+    const passwordInput = document.getElementById('login-password').value;
+    const roleInput = document.getElementById('login-role').value;
+
+    // Check credentials as instructed
+    if (roleInput === 'admin') {
+        if (emailInput === 'admin@pionir.id' && passwordInput === 'adminpionir') {
+            store.currentUser = { name: "Platform Administrator", email: emailInput, id: "admin_pionir" };
+            store.currentRole = 'admin';
+            store.dashboardTab = 'home';
+            setView('dashboard');
+            showToast("Login Admin Berhasil", "Selamat datang di ruang kendali pusat.", "success");
+        } else {
+            showToast("Akses Ditolak", "Kredensial Admin tidak cocok.", "error");
+        }
+    } 
+    else if (roleInput === 'juri') {
+        if (emailInput === 'juri@pionir.id' && passwordInput === 'pionir2026') {
+            store.currentUser = { name: "Dewan Juri Kaltara", email: emailInput, id: "juri_pionir" };
+            store.currentRole = 'juri';
+            store.dashboardTab = 'home';
+            setView('dashboard');
+            showToast("Login Juri Berhasil", "Selamat datang di Panel Penilaian Lomba.", "success");
+        } else {
+            showToast("Akses Ditolak", "Kredensial Juri tidak cocok.", "error");
+        }
+    } 
+    else if (roleInput === 'investor') {
+        if (emailInput === 'investor@pionir.id' && passwordInput === 'pionir2026') {
+            store.currentUser = { name: "Kaltara Capital Group", email: emailInput, id: "investor_pionir" };
+            store.currentRole = 'investor';
+            store.dashboardTab = 'home';
+            setView('dashboard');
+            showToast("Login Investor Berhasil", "Selamat datang di Katalis Penyaluran Modal.", "success");
+        } else {
+            showToast("Akses Ditolak", "Kredensial Investor tidak cocok.", "error");
+        }
+    } 
+    else if (roleInput === 'peserta') {
+        // Find existing participant or simulate new registration
+        const found = participantsData.find(p => p.email.toLowerCase() === emailInput.toLowerCase());
+        if (found && passwordInput === 'pionir2026') {
+            store.currentUser = found;
+            store.currentRole = 'peserta';
+            store.dashboardTab = 'home';
+            setView('dashboard');
+            showToast("Selamat Datang", `Halo ${found.name}, mari kembangkan brand-mu!`, "success");
+        } else {
+            showToast("Kredensial Salah", "Harap gunakan kata sandi pionir2026 atau silakan mendaftar terlebih dahulu.", "error");
+        }
+    }
+}
+
+function handleRegistration(e) {
+    e.preventDefault();
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const commodity = document.getElementById('reg-commodity').value;
+    const brandName = document.getElementById('reg-brand').value.trim() || "Brand Lokal";
+    const password = document.getElementById('reg-password').value;
+
+    if (password !== 'pionir2026') {
+        showToast("Sandi Wajib", "Untuk keseragaman sistem uji, kata sandi wajib: pionir2026", "error");
+        return;
+    }
+
+    // Verify duplicate email
+    if (participantsData.some(p => p.email.toLowerCase() === email.toLowerCase())) {
+        showToast("Email Terdaftar", "Gunakan email lain atau silakan langsung login.", "error");
+        return;
+    }
+
+    // Create new participant record
+    const newParticipant = {
+        id: "p_" + Date.now(),
+        name: name,
+        email: email,
+        commodity: commodity,
+        milestones: { learn: false, build: false, validate: false, scale: false },
+        quizScore: 0,
+        quizStatus: "Belum Ujian",
+        brandName: brandName,
+        brandTagline: "Rasa Komoditas Asli Kaltara",
+        brandPalette: "seaweed",
+        canvasNotes: [
+            { id: 1, section: "value", text: `Inovasi produk berkualitas berbasis ${commodity}.`, color: "bg-yellow-100" }
+        ],
+        challengeFile: "",
+        challengeStatus: "Belum Kirim",
+        juriScore: null,
+        juriFeedback: "",
+        investedCapital: 0,
+        investorNotes: ""
+    };
+
+    participantsData.push(newParticipant);
+    showToast("Pendaftaran Sukses", "Wirausahawan baru berhasil terdaftar di database PIONIR!", "success");
+    setView('login');
+}
+
+function handleLogout() {
+    store.currentUser = null;
+    setView('landing');
+    showToast("Logout Berhasil", "Sesi Anda telah diakhiri.", "success");
+}
+
+
+function submitQuiz(e) {
+    e.preventDefault();
+    const selectedAnswer = document.querySelector('input[name="quiz-q1"]:checked');
+    if (!selectedAnswer) {
+        showToast("Kuis Kosong", "Pilihlah salah satu opsi jawaban.", "error");
+        return;
+    }
+
+    const isCorrect = selectedAnswer.value === "correct";
+    const participant = participantsData.find(p => p.email === store.currentUser.email);
+    if (participant) {
+        participant.quizScore = isCorrect ? 100 : 40;
+        participant.quizStatus = isCorrect ? "Lulus" : "Belum Lulus";
+        participant.milestones.learn = isCorrect;
+        store.currentUser = participant;
+    }
+
+    renderApp();
+    showToast(
+        isCorrect ? "Selamat! Anda Lulus" : "Belum Lulus",
+        isCorrect ? "Skor 100/100. Sertifikat kini aktif!" : "Skor 40/100. Pelajari kembali materi kuis.",
+        isCorrect ? "success" : "error"
+    );
+}
+
+function updateCanvas(section) {
+    const input = document.getElementById(`canvas-input-${section}`);
+    if (!input || !input.value.trim()) return;
+
+    const colors = ['bg-yellow-100', 'bg-emerald-100', 'bg-blue-100', 'bg-rose-100', 'bg-purple-100'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    const participant = participantsData.find(p => p.email === store.currentUser.email);
+    if (participant) {
+        participant.canvasNotes.push({
+            id: Date.now(),
+            section: section,
+            text: input.value.trim(),
+            color: randomColor
+        });
+        participant.milestones.build = true;
+        store.currentUser = participant;
+    }
+
+    input.value = '';
+    renderApp();
+    showToast("Kanvas Diperbarui", "Catatan sticky note berhasil ditempelkan.", "success");
+}
+
+function removeCanvasNote(noteId) {
+    const participant = participantsData.find(p => p.email === store.currentUser.email);
+    if (participant) {
+        participant.canvasNotes = participant.canvasNotes.filter(n => n.id !== noteId);
+        store.currentUser = participant;
+    }
+    renderApp();
+    showToast("Catatan Dihapus", "Sticky note diambil dari kanvas.", "success");
+}
+
+function saveBranding(e) {
+    e.preventDefault();
+    const p = participantsData.find(p => p.email === store.currentUser.email);
+    if (p) {
+        p.brandName = document.getElementById('studio-brand-name').value;
+        p.brandTagline = document.getElementById('studio-brand-tagline').value;
+        p.brandPalette = document.getElementById('studio-brand-palette').value;
+        store.currentUser = p;
+    }
+    renderApp();
+    showToast("Branding Disimpan", "Karakter kemasan ritel produk Anda telah diperbarui.", "success");
+}
+
+function uploadChallenge(e) {
+    e.preventDefault();
+    const p = participantsData.find(p => p.email === store.currentUser.email);
+    if (p) {
+        p.challengeFile = "proposal_rencana_bisnis_" + p.id + ".pdf";
+        p.challengeStatus = "Menunggu Review";
+        p.milestones.validate = true;
+        store.currentUser = p;
+    }
+    renderApp();
+    showToast("Dokumen Terkirim", "Proposal Anda siap dievaluasi oleh Dewan Juri.", "success");
+}
+
+
+function submitGrade(participantId) {
+    const scoreVal = parseInt(document.getElementById(`grade-score-${participantId}`).value);
+    const feedbackVal = document.getElementById(`grade-feedback-${participantId}`).value.trim();
+
+    const participant = participantsData.find(p => p.id === participantId);
+    if (participant) {
+        participant.juriScore = scoreVal;
+        participant.juriFeedback = feedbackVal || "Bagus, pertahankan semangat berinovasi.";
+        showToast("Penilaian Berhasil", `Berhasil memberi nilai ${scoreVal} untuk ${participant.name}`, "success");
+        closeInspector();
+        renderApp();
+    }
+}
+
+function processInvestment(participantId) {
+    const capitalVal = parseInt(document.getElementById(`invest-capital-${participantId}`).value);
+    const noteVal = document.getElementById(`invest-note-${participantId}`).value.trim();
+
+    if (capitalVal > store.investmentPool) {
+        showToast("Dana Tidak Cukup", "Jumlah investasi melebihi pagu simulasi modal Anda.", "error");
+        return;
+    }
+
+    const participant = participantsData.find(p => p.id === participantId);
+    if (participant) {
+        participant.investedCapital += capitalVal;
+        participant.investorNotes = noteVal || "Sinergi percepatan produk unggulan daerah.";
+        store.investmentPool -= capitalVal;
+        showToast("Dana Dikucurkan", `Simulasi modal sebesar Rp ${capitalVal.toLocaleString()} disalurkan!`, "success");
+        closeInspector();
+        renderApp();
+    }
+}
+
+function adminSaveParticipantEdit(participantId) {
+    const nameVal = document.getElementById(`admin-edit-name-${participantId}`).value;
+    const commVal = document.getElementById(`admin-edit-comm-${participantId}`).value;
+    const scoreVal = parseInt(document.getElementById(`admin-edit-score-${participantId}`).value) || 0;
+
+    const participant = participantsData.find(p => p.id === participantId);
+    if (participant) {
+        participant.name = nameVal;
+        participant.commodity = commVal;
+        participant.quizScore = scoreVal;
+        participant.quizStatus = scoreVal >= 75 ? "Lulus" : "Belum Lulus";
+        participant.milestones.learn = scoreVal >= 75;
+        showToast("Data Disimpan", `Profil wirausahawan ${nameVal} diperbarui Admin.`, "success");
+        closeInspector();
+        renderApp();
+    }
+}
+
+function adminAddProgram(e) {
+    e.preventDefault();
+    const title = document.getElementById('new-prog-title').value.trim();
+    const category = document.getElementById('new-prog-cat').value;
+    const target = document.getElementById('new-prog-target').value;
+
+    store.activePrograms.push({
+        id: Date.now(),
+        title: title,
+        category: category,
+        target: target
+    });
+
+    document.getElementById('new-prog-title').value = '';
+    renderApp();
+    showToast("Program Ditambahkan", `Program "${title}" berhasil tayang di platform peserta.`, "success");
+}
+
+function adminDeleteProgram(id) {
+    store.activePrograms = store.activePrograms.filter(p => p.id !== id);
+    renderApp();
+    showToast("Program Dihapus", "Program dibatalkan oleh Admin.", "success");
+}
+
+
+function openInspector(participantId) {
+    store.selectedParticipantId = participantId;
+    const p = participantsData.find(x => x.id === participantId);
+    const drawer = document.getElementById('inspector-drawer');
+    
+    let contents = '';
+    if (store.currentRole === 'admin') {
+        contents = `
+        <div class="bg-white w-full max-w-lg h-full p-8 overflow-y-auto shadow-2xl border-l border-emerald-100 flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center pb-4 border-b">
+                    <h3 class="font-bold text-lg text-brand-dark">Pusat Kendali Profil</h3>
+                    <button onclick="closeInspector()" class="text-brand-slate hover:text-brand-dark font-black">✖</button>
+                </div>
+
+                <div class="space-y-6 mt-6">
+                    <div>
+                        <label class="block text-[10px] font-bold text-brand-sea uppercase tracking-wider mb-2">Formulir Edit Akun Peserta</label>
+                        <div class="space-y-3">
+                            <div>
+                                <span class="text-xs text-brand-slate block">Nama Lengkap</span>
+                                <input type="text" id="admin-edit-name-${p.id}" value="${p.name}" class="w-full text-xs font-semibold p-2.5 border rounded-lg focus:ring-1 focus:ring-brand-fresh outline-none">
+                            </div>
+                            <div>
+                                <span class="text-xs text-brand-slate block">Sektor Komoditas</span>
+                                <select id="admin-edit-comm-${p.id}" class="w-full text-xs font-semibold p-2.5 border rounded-lg outline-none bg-white">
+                                    <option value="Rumput Laut Nunukan" ${p.commodity === 'Rumput Laut Nunukan' ? 'selected' : ''}>Rumput Laut Nunukan</option>
+                                    <option value="Udang Windu Bulungan" ${p.commodity === 'Udang Windu Bulungan' ? 'selected' : ''}>Udang Windu Bulungan</option>
+                                    <option value="Kepiting Bakau Tarakan" ${p.commodity === 'Kepiting Bakau Tarakan' ? 'selected' : ''}>Kepiting Bakau Tarakan</option>
+                                    <option value="Ikan Pepija Tarakan" ${p.commodity === 'Ikan Pepija Tarakan' ? 'selected' : ''}>Ikan Pepija Tarakan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <span class="text-xs text-brand-slate block">Skor Kuis Academy</span>
+                                <input type="number" id="admin-edit-score-${p.id}" value="${p.quizScore}" class="w-full text-xs font-semibold p-2.5 border rounded-lg focus:ring-1 focus:ring-brand-fresh outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <span class="text-xs font-bold text-brand-dark block mb-2">Gagasan Bisnis Canvas</span>
+                        <div class="bg-brand-light p-3 rounded-xl border border-brand-fresh/10 space-y-2">
+                            ${p.canvasNotes.map(note => `<div class="p-2 rounded bg-white border text-[11px] font-medium text-brand-dark">${note.text}</div>`).join('')}
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <span class="text-xs font-bold text-brand-dark block mb-2">Penilaian Juri Saat Ini</span>
+                        <p class="text-xs text-brand-slate">Skor: <span class="font-bold text-brand-sea">${p.juriScore || 'Belum dinilai'}</span></p>
+                        <p class="text-[11px] text-brand-dark italic mt-1">"${p.juriFeedback || 'Menunggu kuesioner diserahkan'}"</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t mt-6 flex gap-2">
+                <button onclick="adminSaveParticipantEdit('${p.id}')" class="flex-1 py-3 bg-brand-sea hover:bg-brand-deep text-white font-bold text-xs rounded-xl transition-all">
+                    Simpan Perubahan
+                </button>
+                <button onclick="closeInspector()" class="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-brand-slate font-bold text-xs rounded-xl transition-all">
+                    Batalkan
+                </button>
+            </div>
+        </div>
+        `;
+    } 
+    else if (store.currentRole === 'juri') {
+        contents = `
+        <div class="bg-white w-full max-w-lg h-full p-8 overflow-y-auto shadow-2xl border-l border-emerald-100 flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center pb-4 border-b">
+                    <h3 class="font-bold text-lg text-brand-dark">Penilaian Ide Wirausaha</h3>
+                    <button onclick="closeInspector()" class="text-brand-slate hover:text-brand-dark font-black">✖</button>
+                </div>
+
+                <div class="space-y-6 mt-6">
+                    <div>
+                        <span class="text-[10px] text-brand-sea font-bold uppercase tracking-wider block">PESERTA</span>
+                        <h4 class="text-base font-bold text-brand-dark">${p.name}</h4>
+                        <p class="text-xs text-brand-slate">Fokus: ${p.commodity} • Merek: <span class="font-semibold text-brand-sea">${p.brandName}</span></p>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                        <span class="text-xs font-bold text-brand-dark block">Gagasan Bisnis Canvas:</span>
+                        <div class="space-y-2">
+                            ${p.canvasNotes.map(n => `<div class="bg-white p-2.5 rounded border text-xs font-medium text-brand-dark">📌 ${n.text}</div>`).join('')}
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <span class="text-xs font-bold text-brand-dark block">File Pengajuan:</span>
+                        <span class="text-xs font-bold text-brand-sea block mt-1">📄 ${p.challengeFile || 'Belum ada berkas terlampir'}</span>
+                    </div>
+
+                    <div class="border-t pt-4 space-y-3">
+                        <span class="text-xs font-bold text-brand-dark block">Formulir Penilaian Juri</span>
+                        <div>
+                            <span class="text-[10px] font-bold text-brand-slate uppercase block mb-1">Skor Akhir (0 - 100)</span>
+                            <input type="number" id="grade-score-${p.id}" value="${p.juriScore || 85}" min="0" max="100" class="w-full p-2.5 border rounded-lg text-xs font-semibold focus:ring-1 focus:ring-brand-fresh outline-none">
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold text-brand-slate uppercase block mb-1">Saran & Umpan Balik Perbaikan</span>
+                            <textarea id="grade-feedback-${p.id}" rows="3" placeholder="Sebutkan catatan Anda untuk kelayakan perencanaan bisnis..." class="w-full p-2.5 border rounded-lg text-xs font-semibold focus:ring-1 focus:ring-brand-fresh outline-none">${p.juriFeedback}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t mt-6">
+                <button onclick="submitGrade('${p.id}')" class="w-full py-3 bg-brand-dark hover:bg-brand-sea text-white font-bold text-xs rounded-xl transition-all">
+                    Kirim Penilaian Resmi
+                </button>
+            </div>
+        </div>
+        `;
+    } 
+    else if (store.currentRole === 'investor') {
+        contents = `
+        <div class="bg-white w-full max-w-lg h-full p-8 overflow-y-auto shadow-2xl border-l border-emerald-100 flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center pb-4 border-b">
+                    <h3 class="font-bold text-lg text-brand-dark">Katalis Penyaluran Modal</h3>
+                    <button onclick="closeInspector()" class="text-brand-slate hover:text-brand-dark font-black">✖</button>
+                </div>
+
+                <div class="space-y-6 mt-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-brand-light flex items-center justify-center text-3xl border border-brand-fresh/10">
+                            🏢
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-brand-dark">${p.brandName}</h4>
+                            <p class="text-xs text-brand-slate">Founder: ${p.name} • Sektor: ${p.commodity}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-emerald-50/50 p-4 rounded-xl border border-brand-fresh/10 space-y-1">
+                        <span class="text-[10px] font-bold text-brand-sea uppercase tracking-widest block">SLOGAN USAHA</span>
+                        <p class="text-xs italic font-semibold text-brand-dark">"${p.brandTagline}"</p>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                        <span class="text-xs font-bold text-brand-dark block">Kebutuhan Finansial Terdata:</span>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-brand-slate">Simulasi Modal Terkumpul:</span>
+                            <span class="font-bold text-brand-sea">Rp ${p.investedCapital.toLocaleString()}</span>
+                        </div>
+                        <p class="text-[10px] text-brand-slate">Simulasi Dana Digunakan untuk percepatan sarana pengeringan modern dan kemasan ekspor.</p>
+                    </div>
+
+                    <div class="border-t pt-4 space-y-3">
+                        <span class="text-xs font-bold text-brand-dark block">Pledge Investasi Baru</span>
+                        <div>
+                            <span class="text-[10px] font-bold text-brand-slate uppercase block mb-1">Penyaluran Modal Simulasi (IDR)</span>
+                            <select id="invest-capital-${p.id}" class="w-full p-2.5 border rounded-lg text-xs font-semibold outline-none bg-white">
+                                <option value="10000000">Rp 10.000.000</option>
+                                <option value="25000000">Rp 25.000.000</option>
+                                <option value="50000000">Rp 50.000.000</option>
+                            </select>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold text-brand-slate uppercase block mb-1">Catatan Harapan Investor</span>
+                            <textarea id="invest-note-${p.id}" rows="3" placeholder="Sebutkan harapan atau strategi yang diinginkan bagi pendampingan modal ini..." class="w-full p-2.5 border rounded-lg text-xs font-semibold focus:ring-1 focus:ring-brand-fresh outline-none"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t mt-6">
+                <button onclick="processInvestment('${p.id}')" class="w-full py-3 bg-brand-sea hover:bg-brand-deep text-white font-bold text-xs rounded-xl transition-all">
+                    Konfirmasi Penyaluran Modal
+                </button>
+            </div>
+        </div>
+        `;
+    }
+
+    drawer.innerHTML = contents;
+    drawer.classList.remove('hidden');
+}
+
+function closeInspector() {
+    document.getElementById('inspector-drawer').classList.add('hidden');
+    store.selectedParticipantId = null;
+}
+
+
+function renderLanding() {
+    return `
+    <div class="fade-in">
+        <nav class="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-40 border-b">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-brand-dark flex items-center justify-center font-black text-xl text-white">
+                    P
+                </div>
+                <div>
+                    <span class="font-extrabold tracking-tight text-lg text-brand-dark block leading-none">PIONIR</span>
+                    <span class="text-[9px] font-bold text-brand-fresh tracking-widest uppercase">Kaltara Inkubator</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="setView('register')" class="text-xs font-bold text-brand-sea hover:text-brand-deep px-4 py-2 transition-all">Daftar</button>
+                <button onclick="setView('login')" class="bg-brand-dark hover:bg-brand-sea text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all">
+                    Masuk Platform
+                </button>
+            </div>
+        </nav>
+
+        <header class="max-w-5xl mx-auto px-6 pt-20 pb-24 text-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-brand-fresh/5 via-transparent to-transparent -z-10"></div>
+            
+            <div class="inline-flex items-center gap-2 bg-brand-fresh/10 border border-brand-fresh/20 px-4 py-1.5 rounded-full mb-6">
+                <span class="w-2 h-2 rounded-full bg-brand-fresh animate-pulse"></span>
+                <span class="text-[10px] font-bold text-brand-sea tracking-wider uppercase">Inkubasi Wirausaha Kaltara 2026</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-brand-dark leading-[1.1] max-w-4xl mx-auto">
+                Mengubah Komoditas Menjadi <span class="bg-gradient-to-r from-brand-sea to-brand-fresh bg-clip-text text-transparent">Brand</span>,<br /> 
+                Gen Z Menjadi <span class="underline decoration-brand-fresh decoration-wavy decoration-2">Entrepreneur</span>.
+            </h1>
+            
+            <p class="mt-8 text-base text-brand-slate max-w-2xl mx-auto leading-relaxed font-medium">
+                Sistem inkubasi linear berbasis komoditas unggulan Kalimantan Utara. Daftarkan diri Anda hari ini dan jadilah bagian dari wirausaha bahari unggulan daerah yang siap divalidasi oleh Juri dan didukung Investor.
+            </p>
+
+            <div class="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
+                <button onclick="setView('register')" class="w-full sm:w-auto bg-gradient-to-r from-brand-sea to-brand-fresh text-white font-bold px-8 py-4 rounded-xl shadow-lg shadow-brand-fresh/20 transition-all text-sm">
+                    Mulai Daftar Sekarang
+                </button>
+                <button onclick="setView('login')" class="w-full sm:w-auto bg-white border text-brand-dark font-bold px-8 py-4 rounded-xl hover:border-brand-fresh transition-all text-sm">
+                    Akses Dashboard Pengguna
+                </button>
+            </div>
+
+            <!-- Visual representation reference to image_c2539e.png as a premium preview mockup -->
+            <div class="mt-16 p-4 bg-white/40 border rounded-3xl premium-shadow max-w-4xl mx-auto">
+                <div class="bg-brand-dark rounded-2xl h-64 overflow-hidden relative flex items-center justify-center">
+                    <div class="absolute inset-0 bg-cover bg-center opacity-45" style="background-image: url('https://images.unsplash.com/photo-1516216628859-9bccecad13ca?auto=format&fit=crop&q=80&w=800')"></div>
+                    <div class="z-10 text-center px-4">
+                        <span class="text-[9px] text-brand-fresh font-bold uppercase tracking-widest block mb-2">Simulated Interactive Workspace</span>
+                        <h3 class="text-xl sm:text-3xl font-extrabold text-white">4 Akses Peran Terkoneksi Real-Time</h3>
+                        <p class="text-xs text-gray-300 max-w-lg mx-auto mt-2">Daftarkan profil wirausaha Anda, dan saksikan seluruh progresnya langsung terpantau oleh Admin, Juri, dan Investor dalam satu wadah digital.</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <footer class="bg-brand-dark text-white py-10 mt-12">
+            <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-brand-slate">
+                <div class="flex items-center gap-2">
+                    <div class="h-6 w-6 bg-brand-fresh rounded flex items-center justify-center font-black text-brand-dark">P</div>
+                    <span class="text-white font-bold">PIONIR KALTARA</span>
+                </div>
+                <p>© 2026 PIONIR Platform. Dikembangkan untuk Hilirisasi Sektor Perikanan & Pesisir.</p>
+            </div>
+        </footer>
+    </div>
+    `;
+}
+
+function renderLogin() {
+    return `
+    <div class="fade-in min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-tr from-brand-deep to-brand-dark relative">
+        <button onclick="setView('landing')" class="absolute top-6 left-6 text-white hover:text-brand-fresh flex items-center gap-2 text-xs font-bold transition-all">
+            ← Kembali ke Beranda
+        </button>
+
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-emerald-900/10 z-10">
+            <div class="text-center mb-6">
+                <div class="h-12 w-12 rounded-2xl bg-brand-sea flex items-center justify-center text-white font-black text-2xl mx-auto shadow-md">P</div>
+                <h2 class="text-xl font-extrabold tracking-tight text-brand-dark mt-4">Masuk ke PIONIR Hub</h2>
+                <p class="text-xs text-brand-slate mt-1">Gunakan akses peran terdaftar di bawah ini</p>
+            </div>
+
+            <!-- Role Selector mimicking visual cues in image_c2539e.png -->
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-brand-dark uppercase tracking-widest mb-1.5">PERAN SISTEM (ROLE)</label>
+                    <select id="login-role" class="w-full px-4 py-3.5 border-2 border-brand-fresh rounded-2xl focus:outline-none focus:border-brand-sea text-xs font-bold bg-white text-brand-dark transition-all">
+                        <option value="peserta">Gen Z Entrepreneur / Peserta</option>
+                        <option value="juri">Dewan Juri</option>
+                        <option value="investor">Investor Mitra</option>
+                        <option value="admin">Platform Admin</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">Nama Pengguna (Email)</label>
+                    <input type="email" id="login-email" required placeholder="email@domain.com" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-fresh text-xs font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">Kata Sandi</label>
+                    <input type="password" id="login-password" required placeholder="Kata sandi" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-fresh text-xs font-semibold">
+                </div>
+
+                <button type="submit" class="w-full py-3.5 bg-brand-dark hover:bg-brand-sea text-white font-bold rounded-xl transition-all text-xs shadow-md">
+                    Masuk Platform
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-gray-100 text-center">
+                <span class="text-xs text-brand-slate">Peserta Baru?</span>
+                <button onclick="setView('register')" class="text-xs font-bold text-brand-sea hover:underline ml-1">Daftar Akun Peserta</button>
+            </div>
+
+            <!-- Credentials Hint Widget for review -->
+            <div class="mt-4 p-3 bg-brand-light rounded-xl border border-brand-fresh/10 text-[10px] text-brand-sea font-semibold">
+                <p class="font-bold mb-1">💡 AKUN DEMO CEPAT:</p>
+                <ul class="space-y-1">
+                    <li>Peserta: <span class="text-brand-dark">rizky@pionir.id</span> / <span class="text-brand-dark">pionir2026</span></li>
+                    <li>Juri: <span class="text-brand-dark">juri@pionir.id</span> / <span class="text-brand-dark">pionir2026</span></li>
+                    <li>Investor: <span class="text-brand-dark">investor@pionir.id</span> / <span class="text-brand-dark">pionir2026</span></li>
+                    <li>Admin: <span class="text-brand-dark">admin@pionir.id</span> / <span class="text-brand-dark">adminpionir</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderRegister() {
+    return `
+    <div class="fade-in min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-tr from-brand-deep to-brand-dark relative">
+        <button onclick="setView('landing')" class="absolute top-6 left-6 text-white hover:text-brand-fresh flex items-center gap-2 text-xs font-bold transition-all">
+            ← Kembali ke Beranda
+        </button>
+
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-emerald-900/10 z-10">
+            <div class="text-center mb-4">
+                <div class="h-10 w-10 rounded-xl bg-brand-sea flex items-center justify-center text-white font-black text-xl mx-auto shadow-md">P</div>
+                <h2 class="text-lg font-extrabold tracking-tight text-brand-dark mt-3">Registrasi Wirausahawan</h2>
+                <p class="text-xs text-brand-slate mt-1">Gabung inkubator wirausaha komoditas lokal Kaltara</p>
+            </div>
+
+            <form onsubmit="handleRegistration(event)" class="space-y-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">Nama Lengkap</label>
+                    <input type="text" id="reg-name" required placeholder="Ahmad Saputra" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-fresh text-xs font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">Email / Nama Pengguna</label>
+                    <input type="email" id="reg-email" required placeholder="nama@pionir.id" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-fresh text-xs font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">Komoditas Unggulan Anda</label>
+                    <select id="reg-commodity" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-brand-dark bg-white">
+                        <option value="Rumput Laut Nunukan">Rumput Laut Nunukan</option>
+                        <option value="Udang Windu Bulungan">Udang Windu Bulungan</option>
+                        <option value="Kepiting Bakau Tarakan">Kepiting Bakau Tarakan</option>
+                        <option value="Ikan Pepija Tarakan">Ikan Pepija Tarakan</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">Nama Calon Merek / Brand</label>
+                    <input type="text" id="reg-brand" placeholder="cth: Nori-Kaltara" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-fresh text-xs font-semibold">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">Sandi Akses Uji (Wajib: pionir2026)</label>
+                    <input type="password" id="reg-password" required value="pionir2026" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-fresh text-xs font-semibold">
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-brand-dark hover:bg-brand-sea text-white font-bold rounded-xl transition-all text-xs shadow-md">
+                    Daftar & Hubungkan Ke Sistem
+                </button>
+            </form>
+
+            <div class="mt-4 pt-3 border-t border-gray-100 text-center">
+                <span class="text-xs text-brand-slate">Sudah punya akun?</span>
+                <button onclick="setView('login')" class="text-xs font-bold text-brand-sea hover:underline ml-1">Masuk Sekarang</button>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderDashboard() {
+    let sidebarItems = '';
+    
+    if (store.currentRole === 'peserta') {
+        sidebarItems = `
+        <li>
+            <button onclick="setDashboardTab('home')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'home' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                🏠 Beranda Wirausaha
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('academy')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'academy' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                🎓 PIONIR Academy (LMS)
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('challenge')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'challenge' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                🚀 Safe To Fail Challenge
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('hub')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'hub' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                🌿 Commodity Hub
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('canvas')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'canvas' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                📊 Validation Canvas
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('branding')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'branding' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                ✨ Branding Studio
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('market')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'market' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                📈 Market Accelerator
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('space')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'space' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                👥 Collaboration Space
+            </button>
+        </li>
+        `;
+    } 
+    else if (store.currentRole === 'admin') {
+        sidebarItems = `
+        <li>
+            <button onclick="setDashboardTab('home')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'home' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                🎛️ Pusat Dashboard Admin
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('program')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'program' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                ⚙️ Pengelolaan Program
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('leaderboard')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'leaderboard' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                🏆 Peringkat Progres Peserta
+            </button>
+        </li>
+        `;
+    } 
+    else if (store.currentRole === 'juri') {
+        sidebarItems = `
+        <li>
+            <button onclick="setDashboardTab('home')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'home' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                📝 Evaluasi Penilaian Bisnis
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('leaderboard')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'leaderboard' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                🏆 Peringkat Nilai Progres
+            </button>
+        </li>
+        `;
+    } 
+    else if (store.currentRole === 'investor') {
+        sidebarItems = `
+        <li>
+            <button onclick="setDashboardTab('home')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'home' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                💰 Eksplorasi Startup Pitch
+            </button>
+        </li>
+        <li>
+            <button onclick="setDashboardTab('leaderboard')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${store.dashboardTab === 'leaderboard' ? 'bg-brand-sea/30 text-brand-fresh border-l-4 border-brand-fresh' : 'text-gray-400 hover:bg-white/[0.03]' }">
+                🏆 Top Wirausaha Binaan
+            </button>
+        </li>
+        `;
+    }
+
+    return `
+    <div class="fade-in min-h-screen bg-brand-light flex flex-col md:flex-row">
+        <!-- Sidebar -->
+        <aside class="w-full md:w-80 bg-brand-dark text-white flex flex-col justify-between border-r border-brand-deep shrink-0 relative z-30">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-8 pb-4 border-b border-brand-deep">
+                    <div class="h-9 w-9 rounded-xl bg-brand-fresh flex items-center justify-center font-black text-brand-dark text-lg">P</div>
+                    <div>
+                        <h1 class="text-sm font-extrabold tracking-tight">PIONIR HUB</h1>
+                        <p class="text-[9px] text-brand-fresh tracking-widest font-semibold uppercase">${store.currentRole} Dashboard</p>
+                    </div>
+                </div>
+
+                <nav class="space-y-4">
+                    <span class="text-[9px] font-bold text-brand-slate tracking-widest block mb-2">MENU UTAMA</span>
+                    <ul class="space-y-1">
+                        ${sidebarItems}
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Profile Widget -->
+            <div class="p-4 border-t border-brand-deep bg-brand-deep/50 flex items-center justify-between">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-9 h-9 rounded-xl bg-brand-sea text-white flex items-center justify-center text-xs font-bold shrink-0">
+                        ${store.currentUser.name ? store.currentUser.name.substring(0, 2).toUpperCase() : 'PI'}
+                    </div>
+                    <div class="truncate">
+                        <h4 class="text-xs font-bold text-white truncate">${store.currentUser.name}</h4>
+                        <p class="text-[9px] text-brand-slate truncate">${store.currentUser.email}</p>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="p-2 text-brand-slate hover:text-red-400 transition-colors" title="Logout">
+                    ✖
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <!-- Topbar -->
+            <header class="bg-white border-b border-gray-200/50 h-16 px-6 flex items-center justify-between sticky top-0 z-20">
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="font-bold text-brand-sea uppercase tracking-wider bg-brand-light px-2.5 py-1 rounded">Kaltara 2026</span>
+                    <span class="text-gray-300">/</span>
+                    <span class="text-brand-slate uppercase font-semibold tracking-widest">${store.dashboardTab}</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-brand-slate font-semibold">
+                    <span class="w-2.5 h-2.5 rounded-full bg-brand-fresh animate-pulse"></span>
+                    <span>Sistem Terkoneksi Real-time</span>
+                </div>
+            </header>
+
+            <!-- Scrollable Workspace Container -->
+            <div class="p-6 sm:p-8 flex-1 overflow-y-auto max-w-7xl w-full mx-auto space-y-6">
+                ${renderActiveDashboardTab()}
+            </div>
+        </main>
+    </div>
+    `;
+}
+
+function renderActiveDashboardTab() {
+    switch (store.dashboardTab) {
+        case 'home':
+            return store.currentRole === 'peserta' ? renderPesertaHome() : renderAdminJuriInvestorHome();
+        case 'academy':
+            return renderAcademyTab();
+        case 'challenge':
+            return renderChallengeTab();
+        case 'hub':
+            return renderHubTab();
+        case 'canvas':
+            return renderCanvasTab();
+        case 'branding':
+            return renderBrandingTab();
+        case 'market':
+            return renderMarketTab();
+        case 'space':
+            return renderSpaceTab();
+        case 'program':
+            return renderAdminProgramManager();
+        case 'leaderboard':
+            return renderCommonLeaderboard();
+        default:
+            return `<p class="text-center text-xs text-brand-slate py-12">Modul Sedang Dimuat...</p>`;
+    }
+}
+
+
+function renderPesertaHome() {
+    const p = participantsData.find(x => x.email === store.currentUser.email);
+    const progressPercent = Object.values(p.milestones).filter(Boolean).length * 25;
+
+    return `
+    <div class="space-y-6">
+        <div class="bg-white rounded-3xl p-6 border border-emerald-100/40 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <span class="text-[10px] text-brand-sea font-bold uppercase tracking-widest">Wirausaha Dashboard</span>
+                <h3 class="text-lg font-black text-brand-dark mt-1">Selamat Berjuang, ${p.name}!</h3>
+                <p class="text-xs text-brand-slate">Fokus pengembangan komoditas: <span class="font-bold text-brand-sea">${p.commodity}</span></p>
+            </div>
+            <div class="flex items-center gap-3 bg-brand-light p-3 rounded-2xl border border-brand-fresh/10">
+                <span class="text-xs font-bold text-brand-sea">Merek Anda:</span>
+                <span class="text-xs font-black bg-brand-dark text-white px-3 py-1 rounded-xl">${p.brandName}</span>
+            </div>
+        </div>
+
+        <!-- Milestones tracker -->
+        <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+            <div class="flex justify-between items-center mb-4">
+                <h4 class="text-xs font-bold text-brand-dark uppercase tracking-wider">Tahapan Alur Inkubasi Linear</h4>
+                <span class="text-xs font-bold text-brand-sea bg-brand-fresh/10 px-3 py-1 rounded-full">${progressPercent}% Selesai</span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="p-4 rounded-2xl border ${p.milestones.learn ? 'bg-emerald-50/50 border-brand-fresh/40 text-brand-sea' : 'bg-gray-50 border-gray-100 text-brand-slate' }">
+                    <span class="text-[9px] font-bold block uppercase tracking-wider">01. Learn</span>
+                    <h5 class="text-xs font-bold text-brand-dark mt-1">PIONIR Academy</h5>
+                    <span class="text-[9px] block mt-1">${p.milestones.learn ? 'Completed ✓' : 'Belum Lulus Kuis'}</span>
+                </div>
+                <div class="p-4 rounded-2xl border ${p.milestones.build ? 'bg-emerald-50/50 border-brand-fresh/40 text-brand-sea' : 'bg-gray-50 border-gray-100 text-brand-slate' }">
+                    <span class="text-[9px] font-bold block uppercase tracking-wider">02. Build</span>
+                    <h5 class="text-xs font-bold text-brand-dark mt-1">Ide Bisnis Canvas</h5>
+                    <span class="text-[9px] block mt-1">${p.milestones.build ? 'Completed ✓' : 'Isi Sticky Notes'}</span>
+                </div>
+                <div class="p-4 rounded-2xl border ${p.milestones.validate ? 'bg-emerald-50/50 border-brand-fresh/40 text-brand-sea' : 'bg-gray-50 border-gray-100 text-brand-slate' }">
+                    <span class="text-[9px] font-bold block uppercase tracking-wider">03. Validate</span>
+                    <h5 class="text-xs font-bold text-brand-dark mt-1">Challenge Juri</h5>
+                    <span class="text-[9px] block mt-1">${p.milestones.validate ? 'Completed ✓' : 'Kirim Berkas'}</span>
+                </div>
+                <div class="p-4 rounded-2xl border ${p.milestones.scale ? 'bg-emerald-50/50 border-brand-fresh/40 text-brand-sea' : 'bg-gray-50 border-gray-100 text-brand-slate' }">
+                    <span class="text-[9px] font-bold block uppercase tracking-wider">04. Scale</span>
+                    <h5 class="text-xs font-bold text-brand-dark mt-1">Pasar & Investasi</h5>
+                    <span class="text-[9px] block mt-1">${p.milestones.scale ? 'Completed ✓' : 'Optimasi Branding'}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Juri's Report Card -->
+            <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                <span class="text-[10px] text-brand-sea font-bold uppercase tracking-widest block mb-1">HASIL RAPOR DEWAN JURI</span>
+                <h4 class="text-sm font-bold text-brand-dark">Nilai Kelayakan Ide Bisnis</h4>
+                
+                ${p.juriScore !== null ? `
+                    <div class="mt-4 p-4 rounded-2xl bg-emerald-50/50 border border-brand-fresh/20 flex items-center justify-between">
+                        <div>
+                            <span class="text-2xl font-black text-brand-sea">${p.juriScore}</span>
+                            <span class="text-xs text-brand-slate">/ 100</span>
+                        </div>
+                        <span class="text-xs font-bold bg-brand-sea text-white px-2.5 py-1 rounded-lg">TERVALIDASI</span>
+                    </div>
+                    <p class="text-xs text-brand-dark italic mt-4">"${p.juriFeedback}"</p>
+                ` : `
+                    <div class="mt-4 p-4 rounded-2xl bg-gray-50 text-center border border-gray-100 text-brand-slate">
+                        <span class="text-xs font-semibold block">Menunggu Evaluasi Proposal Bisnis</span>
+                        <p class="text-[10px] text-gray-400 mt-1">Selesaikan Safe To Fail Challenge untuk mendapat penilaian.</p>
+                    </div>
+                `}
+            </div>
+
+            <!-- Investment Tracker Widget -->
+            <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                <span class="text-[10px] text-brand-sea font-bold uppercase tracking-widest block mb-1">DUKUNGAN INVESTASI DAERAH</span>
+                <h4 class="text-sm font-bold text-brand-dark">Simulasi Kemitraan Finansial</h4>
+
+                ${p.investedCapital > 0 ? `
+                    <div class="mt-4 p-4 rounded-2xl bg-brand-light border border-brand-fresh/20 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-brand-slate block">Dana Terkumpul:</span>
+                            <span class="text-lg font-black text-brand-sea">Rp ${p.investedCapital.toLocaleString()}</span>
+                        </div>
+                        <span class="text-xs font-bold bg-brand-dark text-white px-2.5 py-1 rounded-lg">FUNDED</span>
+                    </div>
+                    <p class="text-xs text-brand-dark mt-4 font-medium">Saran Investor: <span class="italic text-brand-slate">"${p.investorNotes}"</span></p>
+                ` : `
+                    <div class="mt-4 p-4 rounded-2xl bg-gray-50 text-center border border-gray-100 text-brand-slate">
+                        <span class="text-xs font-semibold block">Belum ada komitmen modal masuk</span>
+                        <p class="text-[10px] text-gray-400 mt-1">Maksimalkan proposal dan desain kemasan di Branding Studio Anda.</p>
+                    </div>
+                `}
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderAdminJuriInvestorHome() {
+    let topSectionHeader = '';
+    let description = '';
+    
+    if (store.currentRole === 'admin') {
+        topSectionHeader = 'Pusat Monitoring Admin';
+        description = 'Klik nama peserta di bawah untuk melihat rincian progres lengkap, mengedit profil, kuis, atau catatan kanvas.';
+    } else if (store.currentRole === 'juri') {
+        topSectionHeader = 'Evaluasi & Penilaian Bisnis';
+        description = 'Evaluasi ide bisnis inovatif peserta, berikan skor kelayakan, dan beri umpan balik perbaikan langsung.';
+    } else if (store.currentRole === 'investor') {
+        topSectionHeader = 'Eksplorasi Wirausaha Kaltara';
+        description = 'Pilih salah satu produk startup wirausaha di bawah untuk mempelajari pitch deck dan kucurkan dana investasi.';
+    }
+
+    return `
+    <div class="space-y-6">
+        <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+            <span class="text-[10px] text-brand-sea font-bold uppercase tracking-widest">${topSectionHeader}</span>
+            <h3 class="text-lg font-black text-brand-dark mt-1">Daftar Seluruh Peserta Terintegrasi</h3>
+            <p class="text-xs text-brand-slate mt-1">${description}</p>
+        </div>
+
+        <!-- Metric overview -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-2xl border border-gray-100">
+                <span class="text-[10px] text-brand-slate font-bold uppercase block">TOTAL PESERTA TERDAFTAR</span>
+                <span class="text-2xl font-black text-brand-dark mt-1 block">${participantsData.length} Wirausaha</span>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-gray-100">
+                <span class="text-[10px] text-brand-slate font-bold uppercase block">MODUL ACADEMY LULUS</span>
+                <span class="text-2xl font-black text-brand-sea mt-1 block">${participantsData.filter(p => p.quizStatus === 'Lulus').length} Peserta</span>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-gray-100">
+                <span class="text-[10px] text-brand-slate font-bold uppercase block">PAGU MODAL INVESTASI SIMULASI</span>
+                <span class="text-2xl font-black text-brand-teal mt-1 block">Rp ${store.investmentPool.toLocaleString()}</span>
+            </div>
+        </div>
+
+        <!-- Participants Directory Table / Grid -->
+        <div class="bg-white rounded-3xl border border-emerald-100/30 overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b text-brand-slate text-[10px] font-bold uppercase tracking-wider">
+                            <th class="p-4">Peserta & Merek</th>
+                            <th class="p-4">Sektor Komoditas</th>
+                            <th class="p-4">Academy Kuis</th>
+                            <th class="p-4">Challenge Status</th>
+                            <th class="p-4">Juri Score</th>
+                            <th class="p-4">Invested Capital</th>
+                            <th class="p-4 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y text-xs">
+                        ${participantsData.map(p => `
+                            <tr class="hover:bg-brand-light/30 transition-colors">
+                                <td class="p-4">
+                                    <span class="font-bold text-brand-dark block">${p.name}</span>
+                                    <span class="text-[10px] text-brand-slate">${p.email} | Brand: <span class="font-semibold text-brand-sea">${p.brandName}</span></span>
+                                </td>
+                                <td class="p-4 font-medium text-brand-dark">${p.commodity}</td>
+                                <td class="p-4">
+                                    <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${p.quizStatus === 'Lulus' ? 'bg-emerald-100 text-brand-sea' : 'bg-red-100 text-red-500'}">
+                                        ${p.quizScore}/100 (${p.quizStatus})
+                                    </span>
+                                </td>
+                                <td class="p-4">
+                                    <span class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-lg ${p.challengeStatus === 'Disetujui' ? 'bg-emerald-100 text-brand-sea' : 'bg-amber-100 text-amber-500'}">
+                                        ${p.challengeStatus}
+                                    </span>
+                                </td>
+                                <td class="p-4 font-bold text-brand-dark">${p.juriScore || 'N/A'}</td>
+                                <td class="p-4 font-bold text-brand-sea">Rp ${p.investedCapital.toLocaleString()}</td>
+                                <td class="p-4 text-right">
+                                    <button onclick="openInspector('${p.id}')" class="bg-brand-dark hover:bg-brand-sea text-white font-bold text-[10px] px-3.5 py-1.5 rounded-xl transition-all">
+                                        Detail Progres
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+
+function renderAcademyTab() {
+    const p = participantsData.find(x => x.email === store.currentUser.email);
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">PIONIR Academy LMS</h2>
+            <p class="text-xs text-brand-slate">Kalahkan mentalitas takut gagal berbisnis lewat studi kasus terarah wirausaha lokal.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-brand-dark aspect-video rounded-3xl overflow-hidden relative border border-emerald-900/30 flex items-center justify-center">
+                    <div class="absolute inset-0 bg-cover bg-center opacity-50" style="background-image: url('https://images.unsplash.com/photo-1516216628859-9bccecad13ca?auto=format&fit=crop&q=80&w=800')"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent"></div>
+                    <div class="z-10 text-center text-white px-4">
+                        <div class="w-14 h-14 bg-brand-fresh/90 text-brand-dark flex items-center justify-center text-xl font-bold rounded-full mx-auto animate-pulse">▶</div>
+                        <h4 class="text-sm font-bold mt-4">Modul 1: Memetakan Peluang Komoditas Kaltara Menembus Retail Modern</h4>
+                        <p class="text-[10px] text-brand-fresh mt-1">Oleh Jessica Lorenza (Creative Brand Strategist)</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                    <h4 class="text-xs font-bold text-brand-dark uppercase tracking-wider mb-2">Kasus Sukses: Ahmad Rizky (Hilirisasi Rumput Laut)</h4>
+                    <p class="text-xs text-brand-slate leading-relaxed">
+                        Ahmad Rizky awalnya adalah petani rumput laut tradisional Nunukan yang frustrasi dengan anjloknya harga mentah ekspor. Dia memelopori NoriKaltara dengan mengolah rumput laut kering menjadi camilan nori siap saji bumbu Dayak menggunakan purwarupa manual 20 bungkus sebelum membeli mesin kemas modern.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Quiz Portal -->
+            <div class="space-y-4">
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                    <span class="text-[9px] text-brand-sea font-bold uppercase block mb-1">EVALUASI MODUL</span>
+                    <h4 class="text-sm font-bold text-brand-dark mb-4">Ujian Kompetensi 1</h4>
+
+                    <form onsubmit="submitQuiz(event)" class="space-y-4 text-xs">
+                        <p class="font-bold text-brand-dark">Manakah pendekatan hilirisasi yang paling aman dari risiko kerugian modal besar?</p>
+                        
+                        <label class="block p-3 border rounded-xl hover:border-brand-fresh cursor-pointer bg-gray-50/50">
+                            <input type="radio" name="quiz-q1" value="wrong" class="mr-2">
+                            <span>Membeli pabrik pengolahan rumput laut langsung senilai ratusan juta.</span>
+                        </label>
+                        <label class="block p-3 border rounded-xl hover:border-brand-fresh cursor-pointer bg-gray-50/50">
+                            <input type="radio" name="quiz-q1" value="correct" class="mr-2">
+                            <span>Mewawancarai 10 calon konsumen potensial & menguji MVP kemasan sederhana.</span>
+                        </label>
+
+                        <button type="submit" class="w-full py-2.5 bg-brand-dark hover:bg-brand-sea text-white font-bold rounded-xl transition-all">
+                            Kirim Jawaban Kuis
+                        </button>
+                    </form>
+
+                    <div class="mt-4 pt-4 border-t border-gray-100 text-center text-xs">
+                        <span class="text-brand-slate">Skor Terakhir Anda:</span>
+                        <span class="font-black text-brand-sea block text-base mt-1">${p.quizScore}/100 (${p.quizStatus})</span>
+                    </div>
+                </div>
+
+                ${p.quizStatus === 'Lulus' ? `
+                    <div class="bg-gradient-to-tr from-brand-deep to-brand-dark p-6 rounded-3xl text-white text-center">
+                        <span class="text-2xl">🏅</span>
+                        <h4 class="text-xs font-bold mt-2">Sertifikat Kompetensi Aktif</h4>
+                        <p class="text-[9px] text-gray-400 mt-1">Telah divalidasi oleh sistem PIONIR untuk materi Mindset Antirugi.</p>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderChallengeTab() {
+    const p = participantsData.find(x => x.email === store.currentUser.email);
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">Safe To Fail Challenge</h2>
+            <p class="text-xs text-brand-slate">Ruang eksperimen validasi proposal wirausaha tanpa takut rugi finansial.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                    <span class="text-[9px] text-brand-fresh font-bold uppercase block mb-1">PROGRAM PENGUJI UTAMA</span>
+                    <h4 class="text-base font-black text-brand-dark mb-2">Lomba Perencanaan & Penyusunan Bisnis Kaltara 2026</h4>
+                    <p class="text-xs text-brand-slate leading-relaxed">
+                        Tantangan resmi dari Dewan Juri. Peserta diminta memetakan segmentasi pelanggan riil dengan membuat file proposal perencanaan bisnis (.pdf) dan menyerahkannya untuk mendapatkan evaluasi nilai langsung.
+                    </p>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                    <h4 class="text-xs font-bold text-brand-dark mb-4">Pengajuan Berkas Eksperimen Anda</h4>
+                    <form onsubmit="uploadChallenge(event)" class="space-y-4 text-xs">
+                        <div class="p-6 border-2 border-dashed border-gray-200 rounded-2xl text-center">
+                            <span class="text-2xl block mb-2">📁</span>
+                            <span class="font-bold text-brand-dark block">Kirim Proposal Perencanaan Bisnis (.pdf)</span>
+                            <span class="text-[10px] text-brand-slate block mt-1">Unggah file validasi riset Anda seputar komoditas.</span>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-brand-dark hover:bg-brand-sea text-white font-bold rounded-xl transition-all">
+                            Submit Berkas Ke Dewan Juri
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                    <h4 class="text-xs font-bold text-brand-dark mb-2">Status Penjaringan Berkas</h4>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between items-center py-2 border-b">
+                            <span class="text-brand-slate">Status Pengajuan:</span>
+                            <span class="font-bold text-brand-teal">${p.challengeStatus}</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b">
+                            <span class="text-brand-slate">Berkas Berdiri:</span>
+                            <span class="font-bold text-brand-dark">${p.challengeFile || 'Belum Ada Berkas'}</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2">
+                            <span class="text-brand-slate">Nilai Juri:</span>
+                            <span class="font-bold text-brand-sea">${p.juriScore || 'Belum Dinilai'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderHubTab() {
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">Commodity Innovation Hub</h2>
+            <p class="text-xs text-brand-slate">Pusat pemetaan alternatif pengolahan produk hilir bernilai tinggi asli Kaltara.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            ${Object.keys(COMMODITY_PROFILES).map(key => {
+                const c = COMMODITY_PROFILES[key];
+                return `
+                <div class="bg-white p-5 rounded-3xl border border-emerald-100/30 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div>
+                        <span class="text-xl block mb-2">${key === 'seaweed' ? '🌱' : key === 'shrimp' ? '🍤' : key === 'crab' ? '🦀' : '🐟'}</span>
+                        <h4 class="text-xs font-black text-brand-dark">${c.name}</h4>
+                        <span class="text-[9px] text-brand-sea font-bold block mb-2">${c.stats}</span>
+                        <p class="text-[11px] text-brand-slate leading-relaxed mb-4">${c.desc}</p>
+                    </div>
+                    
+                    <div class="border-t pt-3 mt-3">
+                        <span class="text-[9px] text-brand-slate font-bold uppercase block mb-1">Potensi Hilir Unggulan:</span>
+                        <ul class="text-[10px] font-semibold text-brand-dark space-y-1">
+                            ${c.products.map(p => `<li>• ${p}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                `;
+            }).join('')}
+        </div>
+    </div>
+    `;
+}
+
+function renderCanvasTab() {
+    const p = participantsData.find(x => x.email === store.currentUser.email);
+    const sections = {
+        value: { title: "Value Propositions", icon: "💎" },
+        segments: { title: "Customer Segments", icon: "👥" },
+        channels: { title: "Channels", icon: "📈" }
+    };
+
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">Idea Validation Canvas</h2>
+            <p class="text-xs text-brand-slate">Tulis, petakan, dan susun model bisnis digital Anda dalam lembaran kanvas interaktif.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            ${Object.keys(sections).map(sec => `
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/30 shadow-sm flex flex-col justify-between min-h-[380px]">
+                    <div>
+                        <h4 class="text-xs font-bold text-brand-dark uppercase tracking-wider flex items-center gap-1.5 mb-4">
+                            <span>${sections[sec].icon}</span> ${sections[sec].title}
+                        </h4>
+
+                        <!-- Stickies list -->
+                        <div class="space-y-2 overflow-y-auto max-h-56 pr-1">
+                            ${p.canvasNotes.filter(n => n.section === sec).map(note => `
+                                <div class="${note.color} p-3 rounded-xl border border-black/5 shadow-sm text-[11px] font-semibold text-brand-dark flex justify-between items-start">
+                                    <p class="leading-relaxed flex-1 pr-2">${note.text}</p>
+                                    <button onclick="removeCanvasNote(${note.id})" class="text-brand-slate hover:text-red-500 font-bold ml-1">✖</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t flex gap-2">
+                        <input type="text" id="canvas-input-${sec}" placeholder="Tambah ide..." class="flex-1 p-2 border rounded-lg text-xs focus:ring-1 focus:ring-brand-fresh outline-none">
+                        <button onclick="updateCanvas('${sec}')" class="bg-brand-dark hover:bg-brand-sea text-white font-bold text-xs px-3 py-2 rounded-lg transition-all">Add</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+    `;
+}
+
+function renderBrandingTab() {
+    const p = participantsData.find(x => x.email === store.currentUser.email);
+    let previewBg = 'bg-[#047857]';
+    if (p.brandPalette === 'shrimp') previewBg = 'bg-gradient-to-tr from-[#EA580C] to-[#F97316]';
+    else if (p.brandPalette === 'minimalist') previewBg = 'bg-[#0F172A]';
+
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">Branding Studio</h2>
+            <p class="text-xs text-brand-slate">Membantu mempercepat integrasi desain visual kemasan produk premium secara seketika.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Studio Config -->
+            <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                <h4 class="text-xs font-bold text-brand-dark uppercase tracking-wider mb-4">Pengaturan Identitas Merek</h4>
+                <form onsubmit="saveBranding(event)" class="space-y-4 text-xs">
+                    <div>
+                        <span class="text-[10px] text-brand-slate block mb-1">Nama Brand</span>
+                        <input type="text" id="studio-brand-name" value="${p.brandName}" class="w-full p-2.5 border rounded-lg font-semibold focus:ring-1 focus:ring-brand-fresh outline-none">
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-brand-slate block mb-1">Slogan Tagline</span>
+                        <input type="text" id="studio-brand-tagline" value="${p.brandTagline}" class="w-full p-2.5 border rounded-lg font-semibold focus:ring-1 focus:ring-brand-fresh outline-none">
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-brand-slate block mb-1">Skema Palet Warna Alam</span>
+                        <select id="studio-brand-palette" class="w-full p-2.5 border rounded-lg font-semibold bg-white outline-none">
+                            <option value="seaweed" ${p.brandPalette === 'seaweed' ? 'selected' : ''}>Pesisir Kaltara (Deep Sea Green)</option>
+                            <option value="shrimp" ${p.brandPalette === 'shrimp' ? 'selected' : ''}>Udang Windu (Premium Orange)</option>
+                            <option value="minimalist" ${p.brandPalette === 'minimalist' ? 'selected' : ''}>Modern Slate (Minimalis Hitam)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-brand-dark hover:bg-brand-sea text-white font-bold rounded-xl transition-all">
+                        Perbarui Konfigurasi Merek
+                    </button>
+                </form>
+            </div>
+
+            <!-- Virtual 3D Package Mockup -->
+            <div class="space-y-4">
+                <h4 class="text-xs font-bold text-brand-dark uppercase tracking-wider">Hasil Pratinjau Kemasan Ritel</h4>
+                <div class="${previewBg} p-12 rounded-[2rem] text-center text-white aspect-[4/3] flex flex-col justify-between items-center shadow-lg transition-all duration-300 relative">
+                    <span class="text-[9px] font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full">${p.commodity}</span>
+                    <div>
+                        <h2 class="text-2xl font-black">${p.brandName}</h2>
+                        <p class="text-xs italic mt-1 font-medium text-white/80">"${p.brandTagline}"</p>
+                    </div>
+                    <span class="text-[9px] uppercase tracking-wider opacity-70">100% Produk Lokal Kalimantan Utara</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderMarketTab() {
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">Digital Market Accelerator</h2>
+            <p class="text-xs text-brand-slate">Strategi pemasaran terpadu untuk percepatan penetrasi ritel digital.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+            <div class="bg-white p-4 rounded-2xl border border-gray-100">
+                <span class="text-[10px] text-brand-slate font-bold block uppercase mb-1">Platform Utama</span>
+                <span class="text-sm font-bold text-brand-dark block">TikTok Live & Shop</span>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-gray-100">
+                <span class="text-[10px] text-brand-slate font-bold block uppercase mb-1">Target Konversi</span>
+                <span class="text-sm font-bold text-brand-sea block">3.8% Industri Ritel</span>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-gray-100">
+                <span class="text-[10px] text-brand-slate font-bold block uppercase mb-1">Sinergi Logistik</span>
+                <span class="text-sm font-bold text-brand-dark block">Kaltara Cargo Link</span>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderSpaceTab() {
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">Collaboration Space</h2>
+            <p class="text-xs text-brand-slate">Forum diskusi dan kolaborasi pencarian tim wirausaha muda se-Kaltara.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                    <h4 class="text-xs font-bold text-brand-dark mb-4">Pengumuman Terpasang</h4>
+                    <div class="space-y-3">
+                        ${store.forumPosts.map(post => `
+                            <div class="p-4 rounded-2xl border border-gray-100 bg-gray-50/40 text-xs">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="font-bold text-brand-dark">${post.author} (${post.role})</span>
+                                    <span class="text-[10px] text-brand-slate">Hari ini</span>
+                                </div>
+                                <p class="text-brand-dark font-medium">${post.text}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl border border-emerald-100/30 text-xs space-y-3">
+                <h4 class="text-xs font-bold text-brand-dark">Networking Event Terdekat</h4>
+                <div class="p-3 bg-brand-light rounded-xl border border-brand-fresh/10">
+                    <span class="font-bold block">Online Gathering Pitching Day</span>
+                    <span class="text-[10px] text-brand-slate">Rabu, 03 Juni 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderAdminProgramManager() {
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">Pengelolaan Fitur & Program</h2>
+            <p class="text-xs text-brand-slate">Formulir dinamis Admin untuk menambah atau menghapus program inkubasi peserta.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Add program form -->
+            <div class="bg-white p-6 rounded-3xl border border-emerald-100/30">
+                <h4 class="text-xs font-bold text-brand-dark uppercase tracking-wider mb-4">Form Tambah Program Baru</h4>
+                <form onsubmit="adminAddProgram(event)" class="space-y-4 text-xs">
+                    <div>
+                        <span class="text-[10px] text-brand-slate block mb-1">Nama Program / Challenge</span>
+                        <input type="text" id="new-prog-title" required placeholder="cth: Kompetisi Desain Packaging" class="w-full p-2.5 border rounded-lg font-semibold focus:ring-1 focus:ring-brand-fresh outline-none">
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-brand-slate block mb-1">Kategori Utama</span>
+                        <select id="new-prog-cat" class="w-full p-2.5 border rounded-lg font-semibold bg-white outline-none">
+                            <option value="Academy">Academy</option>
+                            <option value="Challenge">Challenge</option>
+                            <option value="Branding">Branding</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-brand-slate block mb-1">Target Peserta</span>
+                        <select id="new-prog-target" class="w-full p-2.5 border rounded-lg font-semibold bg-white outline-none">
+                            <option value="Semua Peserta">Semua Peserta</option>
+                            <option value="Sektor Perikanan">Sektor Perikanan</option>
+                            <option value="Sektor Rumput Laut">Sektor Rumput Laut</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-brand-dark hover:bg-brand-sea text-white font-bold rounded-xl transition-all">
+                        Tayangkan Program Aktif
+                    </button>
+                </form>
+            </div>
+
+            <!-- Program list -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-emerald-100/30">
+                <h4 class="text-xs font-bold text-brand-dark mb-4">Daftar Program Saat Ini</h4>
+                <div class="space-y-3">
+                    ${store.activePrograms.map(prog => `
+                        <div class="p-4 rounded-2xl border border-gray-100 bg-gray-50/40 flex justify-between items-center text-xs">
+                            <div>
+                                <span class="bg-brand-sea/10 text-brand-sea text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">${prog.category}</span>
+                                <h5 class="font-bold text-brand-dark mt-1.5">${prog.title}</h5>
+                                <span class="text-[10px] text-brand-slate">Target: ${prog.target}</span>
+                            </div>
+                            <button onclick="adminDeleteProgram(${prog.id})" class="text-red-500 hover:text-red-700 font-bold">Hapus</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderCommonLeaderboard() {
+    // Sort participants by quizScore + juriScore (simulating total leaderboard)
+    const sorted = [...participantsData].sort((a, b) => {
+        const scoreA = (a.quizScore || 0) + (a.juriScore || 0);
+        const scoreB = (b.quizScore || 0) + (b.juriScore || 0);
+        return scoreB - scoreA;
+    });
+
+    return `
+    <div class="space-y-6">
+        <div class="border-b pb-4">
+            <h2 class="text-xl font-black text-brand-dark">Peringkat & Nilai Progres Peserta</h2>
+            <p class="text-xs text-brand-slate">Evaluasi total kelayakan komulatif berdasarkan kuis Academy, Canvas, dan Penilaian Juri.</p>
+        </div>
+
+        <div class="bg-white rounded-3xl border border-emerald-100/30 overflow-hidden shadow-sm">
+            <div class="p-6 border-b">
+                <h4 class="text-xs font-bold text-brand-dark uppercase tracking-wider">Tabel Pemeringkatan Inkubasi</h4>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b text-[10px] font-bold text-brand-slate uppercase tracking-wider">
+                            <th class="p-4">Rank</th>
+                            <th class="p-4">Nama Peserta</th>
+                            <th class="p-4">Sektor Komoditas</th>
+                            <th class="p-4">Academy Kuis</th>
+                            <th class="p-4">Juri Score</th>
+                            <th class="p-4">Skor Gabungan</th>
+                            <th class="p-4">Pledges</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y text-xs">
+                        ${sorted.map((p, idx) => `
+                            <tr class="hover:bg-brand-light/20 transition-colors">
+                                <td class="p-4 font-black text-brand-sea text-sm">#${idx + 1}</td>
+                                <td class="p-4">
+                                    <span class="font-bold text-brand-dark block">${p.name}</span>
+                                    <span class="text-[10px] text-brand-slate">${p.brandName}</span>
+                                </td>
+                                <td class="p-4 text-brand-slate font-medium">${p.commodity}</td>
+                                <td class="p-4 font-semibold">${p.quizScore}</td>
+                                <td class="p-4 font-semibold">${p.juriScore || 'N/A'}</td>
+                                <td class="p-4 font-black text-brand-dark">${(p.quizScore || 0) + (p.juriScore || 0)}</td>
+                                <td class="p-4 font-bold text-brand-sea">Rp ${p.investedCapital.toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+
+function renderApp() {
+    const app = document.getElementById('app');
+    
+    if (store.view === 'landing') {
+        app.innerHTML = renderLanding();
+    } else if (store.view === 'login') {
+        app.innerHTML = renderLogin();
+    } else if (store.view === 'register') {
+        app.innerHTML = renderRegister();
+    } else if (store.view === 'dashboard') {
+        app.innerHTML = renderDashboard();
+    }
+    
+    // Auto re-init icons globally
+    lucide.createIcons();
+}
+
+// Boot up sequence
+window.onload = function() {
+    renderApp();
+};
+</script>
+</body>
+</html>
